@@ -1,50 +1,42 @@
-public class Victor implements AutoCloseable{
-
-    static {
-        System.loadLibrary("victorjni");
-    }
+public class Victor extends VictorNative {
 
     private long nativePtr;
 
     public Victor(int type, int method, int dims) {
-        this.nativePtr = allocIndex(type, method, dims);
-        if (this.nativePtr == 0) {
+        nativePtr = allocIndex(type, method, dims);
+        if (isDestroyed()) {
             throw new RuntimeException("Unable to create index.");
         }
     }
 
     public int insert(long id, float[] vector, int dims) {
-        if (this.nativePtr == 0)
-            throw new IllegalStateException("Index has been destroyed.");
+        checkIfDestroyedAndThrow();
 
         int code = nativeInsert(nativePtr, id, vector, dims);
-        VictorError.check(code, "insert()");
+        VictorError.check(code, Thread.currentThread().getStackTrace()[1].getMethodName());
         return code;
     }
 
     public int delete(long id) {
-        if (this.nativePtr == 0)
-            throw new IllegalStateException("Index has been destroyed.");
-        return nativeDelete(this.nativePtr, id);
+        checkIfDestroyedAndThrow();
+        return nativeDelete(nativePtr, id);
     }
-
 
     @Override
     public void close() {
-        if (this.nativePtr == 0) 
-            throw new IllegalStateException("Index has been destroyed.");
-        int code = nativeDestroy(this.nativePtr);
+        checkIfDestroyedAndThrow();
+        int code = (int) nativeDestroy(nativePtr);
         VictorError.check(code, "close()");
-        this.nativePtr = 0;
+        nativePtr = 0;
     }
 
-    public boolean isDestroyed() {
-        return this.nativePtr == 0;
+    public boolean isDestroyed()  {
+        return nativePtr == 0;
     }
 
-    // Métodos nativos privados
-    private static native long allocIndex(int type, int method, int dims);
-    private static native int nativeInsert(long ptr, long id, float[] vector, int dims);
-    private static native int nativeDelete(long ptr, long id);
-    private static native long nativeDestroy(long ptr);
+    private void checkIfDestroyedAndThrow() throws IllegalStateException {
+        if (isDestroyed()) {
+            throw new IllegalStateException("Index has been destroyed.");
+        }
+    }
 }
