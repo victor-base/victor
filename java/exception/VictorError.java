@@ -1,3 +1,5 @@
+package exception;
+
 public enum VictorError {
     SUCCESS(0, ""),
     INVALID_INIT(1, "Invalid initialization."),
